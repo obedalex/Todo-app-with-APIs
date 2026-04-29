@@ -1,0 +1,152 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily — My Day Planner</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <div class="app-wrapper">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">◈</span>
+        <span class="brand-name">Daily</span>
+      </div>
+
+      <div class="date-block">
+        <p class="day-label">Today</p>
+        <p class="day-name" id="dayName">Monday</p>
+        <p class="full-date" id="fullDate">April 28, 2025</p>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <span class="nav-icon">▣</span> My Day
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">◉</span> Planned
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">◎</span> Groceries
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">◈</span> Work
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="progress-label">
+          <span>Today's progress</span>
+          <span id="progressPercent">33%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width: 33%"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <header class="main-header">
+        <div>
+          <h1 class="main-title">My Day</h1>
+          <p class="main-subtitle" id="taskSummary">3 tasks · 1 completed</p>
+        </div>
+        <div class="header-actions">
+          <div class="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="active">Active</button>
+            <button class="filter-btn" data-filter="completed">Done</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Add Task -->
+      <form class="add-task-form" id="addTaskForm">
+        <div class="add-task-inner">
+          <span class="add-icon">+</span>
+          <input
+            type="text"
+            id="taskInput"
+            placeholder="Add a task for today…"
+            autocomplete="off"
+          />
+          <button type="submit" class="add-btn">Add Task</button>
+        </div>
+      </form>
+
+      <!-- Task Groups -->
+      <section class="task-section">
+        <p class="section-label">Active</p>
+        <ul class="todo-list" id="activeList">
+
+          <li class="task-item" data-id="1">
+            <button class="check-btn" aria-label="Complete task"></button>
+            <div class="task-body">
+              <span class="task-text">Buy groceries — eggs, bread, milk</span>
+              <span class="task-tag tag-personal">Personal</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn edit-btn" title="Edit">✎</button>
+              <button class="action-btn delete-btn" title="Delete">✕</button>
+            </div>
+          </li>
+
+          <li class="task-item" data-id="2">
+            <button class="check-btn" aria-label="Complete task"></button>
+            <div class="task-body">
+              <span class="task-text">Call the doctor to schedule appointment</span>
+              <span class="task-tag tag-health">Health</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn edit-btn" title="Edit">✎</button>
+              <button class="action-btn delete-btn" title="Delete">✕</button>
+            </div>
+          </li>
+
+        </ul>
+      </section>
+
+      <section class="task-section" id="completedSection">
+        <p class="section-label">Completed</p>
+        <ul class="todo-list" id="completedList">
+
+          <li class="task-item is-done" data-id="3">
+            <button class="check-btn checked" aria-label="Mark incomplete"></button>
+            <div class="task-body">
+              <span class="task-text">Pay electricity bill online</span>
+              <span class="task-tag tag-finance">Finance</span>
+            </div>
+            <div class="task-actions">
+              <button class="action-btn edit-btn" title="Edit">✎</button>
+              <button class="action-btn delete-btn" title="Delete">✕</button>
+            </div>
+          </li>
+
+        </ul>
+      </section>
+
+      <!-- Footer -->
+      <footer class="list-footer">
+        <span id="remainingCount">2 tasks remaining</span>
+        <button class="clear-btn" id="clearCompleted">Clear completed</button>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Set current date
+    const now = new Date();
+    document.getElementById('dayName').textContent = now.toLocaleDateString('en-US', { weekday: 'long' });
+    document.getElementById('fullDate').textContent = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  </script>
+</body>
+</html>
