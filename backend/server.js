@@ -1,6 +1,7 @@
 import http from "node:http";
 import { parseJSONBody } from "./utils/parseJSONBody.js";
-import { sendJSONresponse } from "./utils/sendJSONResponse.js";
+import { sendJSONResponse } from "./utils/sendJSONResponse.js";
+import { database } from "./config/data.js";
 import { readTodos } from "./utils/readTodos.js";
 import { parseId } from "./utils/parseId.js";
 import { writeTodos } from "./utils/writeTodos.js";
@@ -16,7 +17,8 @@ const server = http.createServer(async (req, res) => {
   switch (true) {
     case isCollection && method === "GET":
       try {
-        const todos = await readTodos();
+        const db = await database();
+        const todos = await db.collection("todos").find({}).toArray();
         sendJSONResponse(res, 200, "application/json", JSON.stringify(todos));
       } catch (error) {
         sendJSONResponse(
@@ -31,7 +33,6 @@ const server = http.createServer(async (req, res) => {
     case isCollection && method === "POST":
       try {
         const data = await parseJSONBody(req);
-        const todos = await readTodos();
 
         if (!data.title) {
           sendJSONResponse(
@@ -42,11 +43,11 @@ const server = http.createServer(async (req, res) => {
           );
           break;
         }
-
-        const newTodo = { id: Date.now(), title: data.title, completed: false };
-        todos.push(newTodo);
-        await writeTodos(todos);
-        sendJSONResponse(res, 201, "application/json", JSON.stringify(newTodo));
+        const db = await database()
+        const todo = { date: new Date(), title: data.title, completed: false };
+        const result = await db.collection("todos").insertOne(todo);
+        const insertedTodo = { _id: result.insertedId, ...todo };
+        sendJSONResponse(res, 201, "application/json", JSON.stringify(insertedTodo));
       } catch (err) {
         sendJSONResponse(
           res,
@@ -56,7 +57,7 @@ const server = http.createServer(async (req, res) => {
         );
       }
       break;
-    
+
     case isItem && method === "PUT": {
       const parsedId = parseId(id);
       if (parsedId === null) {
@@ -126,4 +127,14 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`Connected on port: ${PORT}`));
+async function startServer() {
+  try {
+    await database();
+    server.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
+  } catch (error) {
+    console.error("Failed to connect to database:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
