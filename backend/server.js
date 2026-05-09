@@ -1,23 +1,22 @@
 import http from "node:http";
 import { parseJSONBody } from "./utils/parseJSONBody.js";
 import { sendJSONResponse } from "./utils/sendJSONResponse.js";
-import { database } from "./config/data.js";
-import { readTodos } from "./utils/readTodos.js";
-import { parseId } from "./utils/parseId.js";
-import { writeTodos } from "./utils/writeTodos.js";
+import { connectDB, getDB } from "./config/db.js";
+import { ObjectId } from "mongodb";
 
 const PORT = 8000;
 
 const server = http.createServer(async (req, res) => {
   const { url, method } = req;
-  const isCollection = url === "/todos";
-  const isItem = url.startsWith("/todos/");
-  const id = isItem ? url.split("/")[2] : null;
+  const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url;
+  const isCollection = cleanUrl === "/todos";
+  const isItem = cleanUrl.startsWith("/todos/");
+  const id = isItem ? cleanUrl.split("/")[2] : null;
 
   switch (true) {
     case isCollection && method === "GET":
       try {
-        const db = await database();
+        const db = getDB();
         const todos = await db.collection("todos").find({}).toArray();
         sendJSONResponse(res, 200, "application/json", JSON.stringify(todos));
       } catch (error) {
@@ -26,6 +25,32 @@ const server = http.createServer(async (req, res) => {
           500,
           "application/json",
           JSON.stringify({ error: "Could not read todos" }),
+        );
+      }
+      break;
+
+    case isItem && method === "GET":
+      try {
+        const db = getDB();
+        const todo = await db
+          .collection("todos")
+          .findOne({ _id: new ObjectId(id) });
+        if (!todo) {
+          sendJSONResponse(
+            res,
+            404,
+            "application/json",
+            JSON.stringify({ error: "todo not found" }),
+          );
+          return;
+        }
+        sendJSONResponse(res, 200, "application/json", JSON.stringify(todo));
+      } catch (error) {
+        sendJSONResponse(
+          res,
+          400,
+          "application/json",
+          JSON.stringify({ error: "Invalid ID format" }),
         );
       }
       break;
@@ -43,11 +68,16 @@ const server = http.createServer(async (req, res) => {
           );
           break;
         }
-        const db = await database()
+        const db = getDB();
         const todo = { date: new Date(), title: data.title, completed: false };
         const result = await db.collection("todos").insertOne(todo);
         const insertedTodo = { _id: result.insertedId, ...todo };
-        sendJSONResponse(res, 201, "application/json", JSON.stringify(insertedTodo));
+        sendJSONResponse(
+          res,
+          201,
+          "application/json",
+          JSON.stringify(insertedTodo),
+        );
       } catch (err) {
         sendJSONResponse(
           res,
@@ -59,59 +89,79 @@ const server = http.createServer(async (req, res) => {
       break;
 
     case isItem && method === "PUT": {
-      const parsedId = parseId(id);
-      if (parsedId === null) {
+      try {
+        // 1. get db
+        const db = getDB();
+        // 2. parse request body
+        const body = await parseJSONBody(req);
+        console.log("body:", body);
+        console.log("id:", id);
+        console.log("ObjectId:", new ObjectId(id));
+        // 3. call updateOne with ObjectId filter and $set
+        const result = await db
+          .collection("todos")
+          .updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { title: body.title, completed: body.completed } },
+          );
+        // 4. check result.matchedCount — if 0, respond 404
+        if (result.matchedCount === 0) {
+          sendJSONResponse(
+            res,
+            404,
+            "application/json",
+            JSON.stringify({ error: "Not found" }),
+          );
+          return;
+        }
+        // 5. respond 200 with success
+        sendJSONResponse(
+          res,
+          200,
+          "application/json",
+          JSON.stringify({
+            message: "Todo updated successfully",
+          }),
+        );
+      } catch (error) {
+        console.log(error);
+        // invalid ObjectId format → respond 400
         sendJSONResponse(
           res,
           400,
           "application/json",
           JSON.stringify({ error: "Invalid ID" }),
         );
-      } else {
-        const todos = await readTodos();
-        const todo = todos.find((t) => t.id === parsedId);
-        if (!todo) {
-          sendJSONResponse(
-            res,
-            404,
-            "application/json",
-            JSON.stringify({ error: "Todo not found" }),
-          );
-        } else {
-          const data = await parseJSONBody(req);
-          if (data.title !== undefined) todo.title = data.title;
-          if (data.completed !== undefined) todo.completed = data.completed;
-          await writeTodos(todos);
-          sendJSONResponse(res, 200, "application/json", JSON.stringify(todo));
-        }
       }
       break;
     }
+
+    //DELETE handler
     case isItem && method === "DELETE": {
-      const parsedId = parseId(id);
-      if (parsedId === null) {
+      try {
+        const db = getDB();
+        const result = await db
+          .collection("todos")
+          .deleteOne({ _id: new ObjectId(id) });
+        if (result.deletedCount === 0) {
+          sendJSONResponse(
+            res,
+            404,
+            "application/json",
+            JSON.stringify({ error: "Not found" }),
+          );
+          return;
+        }
+        res.statusCode = 204;
+        res.end();
+      } catch (error) {
+        console.log(error);
         sendJSONResponse(
           res,
           400,
           "application/json",
           JSON.stringify({ error: "Invalid ID" }),
         );
-      } else {
-        const todos = await readTodos();
-        const index = todos.findIndex((t) => t.id === parsedId);
-        if (index === -1) {
-          sendJSONResponse(
-            res,
-            404,
-            "application/json",
-            JSON.stringify({ error: "Todo not found" }),
-          );
-        } else {
-          todos.splice(index, 1);
-          await writeTodos(todos);
-          res.statusCode = 204;
-          res.end();
-        }
       }
       break;
     }
@@ -129,7 +179,7 @@ const server = http.createServer(async (req, res) => {
 
 async function startServer() {
   try {
-    await database();
+    await connectDB();
     server.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
   } catch (error) {
     console.error("Failed to connect to database:", error);
