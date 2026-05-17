@@ -11,3 +11,8 @@ export async function connectDB() {
 export function getDB() {
   return client.db("todo-api");
 }
+
+export function closeDB() {
+      await client.close();
+    }
+
