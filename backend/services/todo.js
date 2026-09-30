@@ -22,11 +22,18 @@ export async function createTodo(data) {
 
 export async function updateTodo(id, data) {
   const db = getDB();
-  const result = await db.collection("todos").updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { title: data.title, completed: data.completed } }
-  );
-  return result.matchedCount > 0;
+  const changes = {};
+  if (data.title !== undefined) changes.title = data.title;
+  if (data.completed !== undefined) changes.completed = data.completed;
+
+  const result = await db
+    .collection("todos")
+    .findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: changes },
+      { returnDocument: "after" },
+    );
+  return result;
 }
 
 export async function deleteTodo(id) {

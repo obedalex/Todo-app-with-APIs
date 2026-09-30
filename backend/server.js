@@ -1,4 +1,6 @@
 import http from "node:http";
+import { pathToFileURL } from "node:url";
+import { logger } from "./utils/logger.js";
 import { connectDB, closeDB } from "./config/db.js";
 import { todoRouter } from "./routes/todo.js";
 import { sendJSONResponse } from "./utils/sendJSONResponse.js";
@@ -30,7 +32,7 @@ const server = http.createServer(async (req, res) => {
 async function startServer() {
   try {
     await connectDB();
-    server.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
+    server.listen(PORT, () => logger.info(`Server running on port: ${PORT}`));
     process
       .on("SIGINT", async () => {
         await closeDB();
@@ -48,4 +50,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer();
+}
+
+export { server, startServer };

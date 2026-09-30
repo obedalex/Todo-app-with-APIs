@@ -106,12 +106,7 @@ export async function updateTodo(req, res) {
       );
       return;
     }
-    sendJSONResponse(
-      res,
-      200,
-      "application/json",
-      JSON.stringify({ message: "Todo updated successfully" }),
-    );
+    sendJSONResponse(res, 200, "application/json", JSON.stringify(updated));
   } catch (err) {
     err.statusCode = 400;
     throw err;
